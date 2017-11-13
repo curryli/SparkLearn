@@ -100,7 +100,8 @@ object card_machnt_test {
     card_df_pairs.show
     mchnt_df_pairs.show 
     
-    val test_mchnt_rdd = sc.textFile("xrli/credit/test_mchnt.csv").map(x => Row(x))
+    //val test_mchnt_rdd = sc.textFile("xrli/credit/test_mchnt.csv").map(x => Row(x))
+    val test_mchnt_rdd = sc.textFile("xrli/credit/mchnt_2.csv").map(x => Row(x))
     
     val schema =  new StructType().add("mchnt_cd",StringType,true)
     
@@ -113,13 +114,16 @@ object card_machnt_test {
     
     
     val test_mchnt_idx = mchnt_df_pairs.filter(mchnt_df_pairs("mchnt_cd").isin(test_mchntlist:_*))
-    print(test_mchnt_idx.count)
+    //print(test_mchnt_idx.count)
     //test_mchnt_idx.show
     
-    val test_mchnt_df = test_mchnt_idx.select("mchnt_cd_idx")
+    val test_mchnt_df = test_mchnt_idx.select("mchnt_cd_idx").distinct()
     
+    println("card_df_idx: " , card_df_idx.count)
+    
+    println("test_mchnt_df: " , test_mchnt_df.count)
     val cross_table =  card_df_idx.crossJoin(test_mchnt_df)
-    println(cross_table.count)
+    println("cross_table count: " , cross_table.count)
     
     //cross_table.show
     
@@ -131,16 +135,23 @@ object card_machnt_test {
     
     println(predictionsImplicit.count())
   
+    println("Ranking......")
     
     //predictionsImplicit.show
  /////////////////////////////////////////////////////////////////////   
     
-    val win = Window.partitionBy("mchnt_cd_idx").orderBy("prediction")    //分组topN   根据用户分组，对该组内的评分排序
+    //val win = Window.partitionBy("mchnt_cd_idx").orderBy("prediction")   //分组topN   根据用户分组，对该组内的评分排序
+    //predictionsImplicit = predictionsImplicit.withColumn("ranks", rank().over(win))  
     
-    predictionsImplicit = predictionsImplicit.withColumn("ranks", rank().over(win).desc)
+    //predictionsImplicit = predictionsImplicit.withColumn("ranks", row_number.over(Window.partitionBy("mchnt_cd_idx").orderBy("prediction")))  
+    
+    //predictionsImplicit = predictionsImplicit.withColumn("ranks", row_number.over(Window.partitionBy("mchnt_cd_idx").orderBy(col("prediction").desc)))  
+    
+    predictionsImplicit = predictionsImplicit.withColumn("ranks", row_number.over(Window.partitionBy("mchnt_cd_idx").orderBy(desc("prediction"))))
+    
     //predictionsImplicit.show(500)
     
-    predictionsImplicit = predictionsImplicit.filter(predictionsImplicit("ranks")<20)
+    predictionsImplicit = predictionsImplicit.filter(predictionsImplicit("ranks")<100)
     //predictionsImplicit.show(500)
     
     
@@ -153,7 +164,7 @@ object card_machnt_test {
     
     val cols = Array("mchnt_cd", "card_no", "prediction")
     
-    predictionsImplicit.selectExpr(cols:_*).rdd.map(_.mkString(",")).saveAsTextFile("xrli/credit/CF_rank20") 
+    predictionsImplicit.selectExpr(cols:_*).rdd.map(_.mkString(",")).saveAsTextFile("xrli/credit/CF_rank100_2") 
       
     println("All done in " + (System.currentTimeMillis()-startTime)/(1000*60) + " minutes." )   
    
