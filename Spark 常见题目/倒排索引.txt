@@ -1,0 +1,47 @@
+spark【例子】倒排索引(InvertedIndex)
+标签： spark
+2017-04-11 11:23 482人阅读 评论(0) 收藏 举报
+ 分类： SQL（3）  
+例子描述：
+
+【倒排索引(InvertedIndex)】
+
+这个例子是在一本讲Spark书中看到的，但是样例代码写的太Java化，没有函数式编程风格，于是问了些高手，教我写了份函数式的倒排索引。 
+这段代码，我在刚开始学的时候很难想到二次拆分数据，所以这个难点挺不错的。
+
+原始数据 
+cx1|a,b,c,d,e,f 
+cx2|c,d,e,f 
+cx3|a,b,c,f 
+cx4|a,b,c,d,e,f 
+cx5|a,b,e,f 
+cx6|a,b,c,d 
+cx7|a,b,c,f 
+cx8|d,e,f 
+cx9|b,c,d,e,f
+
+结果数据 
+d|cx1,cx2,cx4,cx6,cx8,cx9 
+e|cx1,cx2,cx4,cx5,cx8,cx9 
+a|cx1,cx3,cx4,cx5,cx6,cx7 
+b|cx1,cx3,cx4,cx5,cx6,cx7,cx9 
+f|cx1,cx2,cx3,cx4,cx5,cx7,cx8,cx9 
+c|cx1,cx2,cx3,cx4,cx6,cx7,cx9
+
+代码片段：
+
+/* 倒排索引InvertedIndex */
+
+val source = Source.fromFile("E:/cxsvn/txt/dp.txt").getLines.toArray
+val cxRDD0 = sc.parallelize(source)                        /* spark单机读取数据 */
+
+cxRDD0.flatMap {
+  lines =>
+    val line = lines.split("\\|", -1)                      /* 拆分数据，以竖杠为拆分条件 */
+    line(1).split(",", -1).map {                           /* 再对拆分后的数据，进行第二次拆分 */
+      v =>
+        (v, line(0))                                       /* 拼接数据 */
+    }
+}.groupByKey()                                             /* 分组 */
+.sortBy(_._1,true)                                         /* 排序 */
+.foreach(x => println(s"${x._1}|${x._2.mkString(",")}"))   /* 格式化输出 */
