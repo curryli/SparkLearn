@@ -25,7 +25,7 @@ object WindowWordCount {
     val lines = ssc.socketTextStream(args(0), args(1).toInt, StorageLevel.MEMORY_ONLY_SER)
     val words = lines.flatMap(_.split(","))
  
-    // windows操作，第一种方式为叠加处理，第二种方式为增量处理
+    // windows操作，第一种方式为叠加处理，第二种方式为增量处理   https://blog.csdn.net/lovehuangjiaju/article/details/50095491
     val wordCounts = words.map(x => (x , 1)).reduceByKeyAndWindow((a:Int,b:Int) => (a + b), Seconds(args(2).toInt), Seconds(args(3).toInt))
 //val wordCounts = words.map(x => (x , 1)).reduceByKeyAndWindow(_+_, _-_,Seconds(args(2).toInt), Seconds(args(3).toInt))
  
